@@ -9,10 +9,12 @@ const os   = require("os");
 const ORI_API_BASE = process.env.ORI_API_BASE ?? "https://glm.thynaptic.com/v1";
 const ORI_API_KEY  = process.env.ORI_API_KEY  ?? "";
 
-// Hearthstone Power.log path per platform
+// Hearthstone Power.log path per platform.
+// NOTE: Power.log → ~/Library/Logs/...
+//       log.config → ~/Library/Preferences/... (separate location)
 function getLogPath() {
   if (process.platform === "darwin") {
-    return path.join(os.homedir(), "Library/Preferences/Blizzard/Hearthstone/Logs/Power.log");
+    return path.join(os.homedir(), "Library/Logs/Blizzard/Hearthstone/Power.log");
   }
   // Windows
   return path.join(
@@ -162,9 +164,12 @@ function startLogTailer() {
     if (stat.size < logPos) logPos = 0; // file was reset
   }
 
-  // Initial read
+  // Initial read — parse existing content so in-progress games are detected on launch
   if (fs.existsSync(logPath)) {
-    logPos = fs.statSync(logPath).size; // start from current end, don't replay history
+    const content = fs.readFileSync(logPath, "utf-8");
+    const existingLines = content.split(/\r?\n/);
+    for (const line of existingLines) parseLine(line);
+    logPos = fs.statSync(logPath).size;
   }
 
   logWatcher = fs.watch(path.dirname(logPath), { persistent: false }, (event, filename) => {
