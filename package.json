@@ -1,0 +1,1 @@
+{"name":"oristone","version":"0.1.0","description":"Hearthstone log analysis for ORI","type":"module","scripts":{"parse":"bun src/parse.ts","dev":"bun --watch src/parse.ts"}}
