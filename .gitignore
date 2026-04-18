@@ -1,1 +1,3 @@
 node_modules/\nbun.lockb\ndist/\n*.log\n.env
+data/
+.env
