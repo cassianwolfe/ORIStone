@@ -46,6 +46,30 @@ function getLogDir() {
   );
 }
 
+// Ensure HS log.config has Power logging enabled. Without this file HS writes nothing.
+function ensureLogConfig() {
+  const configDir = process.platform === "darwin"
+    ? path.join(os.homedir(), "Library/Preferences/Blizzard/Hearthstone")
+    : path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData/Local"), "Blizzard/Hearthstone");
+  const configPath = path.join(configDir, "log.config");
+  const required = "[Power]\nLogLevel=1\nFilePrinting=True\nConsolePrinting=False\nScreenPrinting=False\nVerbose=True\n";
+  try {
+    if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
+    let existing = fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf-8") : "";
+    const needsBlock = !existing.includes("[Power]");
+    const needsFix   = existing.includes("FilePrinting=False");
+    if (needsBlock) {
+      fs.writeFileSync(configPath, existing ? existing + "\n" + required : required, "utf-8");
+      console.log("[ORIStone] log.config updated — restart Hearthstone once to activate logging");
+    } else if (needsFix) {
+      fs.writeFileSync(configPath, existing.replace("FilePrinting=False", "FilePrinting=True"), "utf-8");
+      console.log("[ORIStone] log.config fixed (FilePrinting was False) — restart Hearthstone once");
+    }
+  } catch (e) {
+    console.warn("[ORIStone] Could not write log.config:", e.message);
+  }
+}
+
 // Known log filenames in priority order. If none match, fall back to the
 // most recently modified .log file in the directory — handles Blizzard renames.
 const KNOWN_LOG_NAMES = ["Player.log", "Power.log", "player.log", "power.log"];
@@ -226,6 +250,8 @@ function parseLine(raw) {
         if (name && !name.startsWith("UNKNOWN")) hand.push(name);
       }
     }
+
+    console.log(`[ORIStone] Mulligan fired — localPlayerNum=${lp}, hand=[${hand.join(", ")}], zones=${JSON.stringify([...gameState.entityZone].filter(([,z])=>z==="HAND"))}`);
 
     if (hand.length && win && !win.isDestroyed()) {
       const oppNum  = lp === 1 ? 2 : 1;
@@ -1037,6 +1063,7 @@ If the user asks you to ADD, REMOVE, SWAP, TWEAK, OPTIMIZE, or IMPROVE cards in 
 // Boot
 
 app.whenReady().then(async () => {
+  ensureLogConfig();
   createWindow();
   await initCardData();
 });
