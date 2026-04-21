@@ -109,11 +109,13 @@ All hover background tints use warm gold, never cold white:
 
 ### IPC flow (workshop)
 ```
-renderer: workshop.askORI(msg, { cards: [...] }, history)
+renderer: workshop.askORI(msg, getDeckArg(), history)
   → ipcRenderer.send("ws:ask-ori", { message, deck, history })
     → ipcMain: askORIWorkshop(message, deck, history, workshopWin)
       → streams tokens back via workshopWin.webContents.send("ws:ori-token", token)
 ```
+
+`getDeckArg()` always includes `{ cards, format, class }` — all three must be present so ORI doesn't misclassify the deck.
 
 ### ORI streaming state (both renderers)
 ```javascript
@@ -139,6 +141,41 @@ Code blocks are hidden from chat display but **kept in chat history** so ORI rem
 
 If ORI makes a change without a block, nothing is applied. The prompt states this explicitly.
 
+### Deck import/export (collection.js + workshop.html)
+HS now uses a text format for copy/paste. `decodeDeckCode()` accepts both bare base64 and the full text block — it extracts the non-`#` line as the base64.
+
+Export format (Copy Code button):
+```
+### {deckName}
+# Class: {class}
+# Format: {format}
+# 
+# 2x (1) Card Name
+...
+# 
+{base64}
+# 
+# To use this deck, copy it to your clipboard and create a new deck in Hearthstone
+```
+
+Import modal uses a `<textarea>` (not `<input>`) so multiline paste works. Parses `### Title` and `# Class:` from header to set `currentDeckName` and `classFilter`.
+
+`CLASS_HERO_DBFID` map in workshop.html maps class → base hero dbfId for encoding (never rely on `allCards` type lookup — casing varies).
+
+### Class detection after ORI builds a deck
+`detectClassFromDeck(slots)` tallies non-NEUTRAL card classes and picks the majority. Called in `tryBuildDeckFromResponse` after deck is set — auto-selects the class dropdown.
+
+### Mulligan coach (in-game bubble)
+On `TAG_CHANGE Entity=GameEntity tag=STEP value=BEGIN_MULLIGAN`:
+- `entityName` is pre-populated from `FULL_ENTITY` CardIDs (not just SHOW_ENTITY) so names are available before mulligan
+- `localPlayerNum` is inferred from which HAND entities have known names (face-up = yours)
+- Fires `askORI` with opening hand + opponent hero, sends `mulligan-start` to bubble
+- Bubble auto-opens panel, injects user message, ORI streams advice
+- `gameState.mulligan.fired` prevents double-fire per game
+
+### ORI class grounding (Year of the Scarab)
+New cards post-Aug 2025 cutoff: ORI doesn't know their class from training. The `deckStr` sent to `askORIWorkshop` includes `IMPORTANT: do not reclassify` so ORI trusts the provided class label.
+
 ---
 
 ## Editing Rules
@@ -158,12 +195,6 @@ Check new CSS before committing — no `rgba(255,255,255,0.X)` hovers, no hardco
 
 ---
 
-## Known Debug State (clean up before demo)
+## Debug / Dev
 
-```javascript
-// main.js:692 — remove before release
-workshopWin.loadFile("workshop.html", { extraHeaders: "pragma: no-cache\n" });
-
-// main.js:693 — remove before release
-workshopWin.webContents.openDevTools({ mode: "detach" });
-```
+`bubble.html` DevTools only open when launched with `--dev` flag. No debug state currently committed.
