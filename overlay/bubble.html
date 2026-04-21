@@ -7,11 +7,36 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  :root {
+    --bg:              #120e08;
+    --surface:         #1c1610;
+    --surface-raised:  #241d14;
+    --surface-overlay: #2e2418;
+    --border:          rgba(255,220,150,0.08);
+    --border-strong:   rgba(255,220,150,0.15);
+    --border-focus:    rgba(212,160,48,0.5);
+    --primary:         #d4a030;
+    --primary-hi:      #e0b840;
+    --primary-lo:      #b08828;
+    --primary-dim:     rgba(212,160,48,0.12);
+    --secondary:       #e8763a;
+    --secondary-dim:   rgba(232,118,58,0.12);
+    --text:            #f2e6cc;
+    --text-muted:      #a08860;
+    --text-faint:      #6a5540;
+    --danger:          #fc8181;
+    --success:         #68d391;
+    --warning:         #f6ad55;
+    --t-fast:          0.1s ease;
+    --t-base:          0.15s ease;
+    --t-slow:          0.25s ease;
+  }
+
   body {
     background: transparent;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 13px;
-    color: #f0f0f0;
+    color: var(--text);
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
@@ -22,134 +47,113 @@
     position: fixed;
     bottom: 16px;
     right: 16px;
-    width: 52px;
-    height: 52px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    border: 2px solid rgba(99, 179, 237, 0.6);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgba(99,179,237,0.2);
+    background: url("../images/Orb1.png") center/cover no-repeat;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgba(212,160,48,0.2);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     z-index: 100;
   }
 
   #bubble:hover {
     transform: scale(1.08);
-    border-color: rgba(99, 179, 237, 0.9);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 20px rgba(99,179,237,0.35);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 20px rgba(212,160,48,0.4);
   }
 
   #bubble.active {
-    border-color: rgba(129, 230, 217, 0.8);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 20px rgba(129,230,217,0.3);
-  }
-
-  #bubble svg {
-    width: 26px;
-    height: 26px;
-    opacity: 0.9;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 22px rgba(212,160,48,0.4);
   }
 
   /* ── Game state indicator dot ── */
   #status-dot {
     position: fixed;
-    bottom: 14px;
-    right: 14px;
-    width: 10px;
-    height: 10px;
+    bottom: 14px; right: 14px;
+    width: 10px; height: 10px;
     border-radius: 50%;
-    background: #718096;
+    background: var(--text-faint);
     border: 1.5px solid rgba(0,0,0,0.4);
-    transition: background 0.3s ease;
+    transition: background var(--t-slow);
     z-index: 101;
   }
-
-  #status-dot.active  { background: #68d391; }
-  #status-dot.waiting { background: #f6ad55; }
+  #status-dot.active  { background: var(--success); }
+  #status-dot.waiting { background: var(--warning); }
 
   /* ── Panel ── */
   #panel {
     position: fixed;
-    bottom: 76px;
-    right: 16px;
-    width: 310px;
-    max-height: 420px;
-    background: rgba(13, 16, 26, 0.94);
-    border: 1px solid rgba(99, 179, 237, 0.25);
+    bottom: 90px; right: 16px;
+    width: 310px; max-height: 420px;
+    background: rgba(24,21,16,0.96);
+    border: 1px solid var(--border-strong);
     border-radius: 14px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
-    display: flex;
-    flex-direction: column;
+    display: flex; flex-direction: column;
     overflow: hidden;
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
+    opacity: 0; transform: translateY(10px) scale(0.96);
     pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    transition: opacity var(--t-base), transform var(--t-base);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     z-index: 99;
   }
-
   #panel.open {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    opacity: 1; transform: translateY(0) scale(1);
     pointer-events: all;
   }
 
   /* ── Header ── */
   #header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     padding: 10px 14px 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-
-  #header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
+  #header-left { display: flex; align-items: center; gap: 8px; }
   #header h1 {
-    font-size: 13px;
-    font-weight: 600;
-    color: #90cdf4;
-    letter-spacing: 0.03em;
+    font-size: 12px; font-weight: 700;
+    color: var(--primary); letter-spacing: 0.07em; text-transform: uppercase;
   }
-
   #game-pill {
-    font-size: 10px;
-    font-weight: 500;
-    color: #718096;
+    font-size: 10px; font-weight: 500;
+    color: var(--text-muted);
     background: rgba(255,255,255,0.05);
-    border-radius: 99px;
-    padding: 2px 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 160px;
-    transition: color 0.3s ease;
+    border-radius: 99px; padding: 2px 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;
+    transition: color var(--t-base);
   }
+  #game-pill.in-game { color: var(--success); }
 
-  #game-pill.in-game { color: #68d391; }
-
-  #close-btn {
-    background: none;
-    border: none;
-    color: #4a5568;
-    cursor: pointer;
-    font-size: 16px;
-    line-height: 1;
-    padding: 2px 4px;
-    border-radius: 4px;
-    transition: color 0.1s ease;
+  /* ── Opponent archetype bar ── */
+  #opp-bar {
+    display: none; align-items: center; gap: 6px;
+    padding: 5px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; color: var(--text-muted); flex-shrink: 0;
   }
-  #close-btn:hover { color: #a0aec0; }
+  #opp-bar.visible { display: flex; }
+  #opp-bar .opp-vs   { opacity: 0.4; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #opp-bar .opp-name { color: var(--text); font-weight: 500; }
+  #opp-bar .opp-tier { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+  #opp-bar .tier-S { background: rgba(246,173,85,0.18);  color: var(--warning); }
+  #opp-bar .tier-A { background: rgba(104,211,145,0.18); color: var(--success); }
+  #opp-bar .tier-B { background: rgba(99,179,237,0.18);  color: var(--secondary); }
+  #opp-bar .tier-C { background: rgba(160,174,192,0.18); color: #a0aec0; }
+  #opp-bar .tier-D { background: rgba(252,129,129,0.18); color: var(--danger); }
+  #opp-bar .opp-wr   { margin-left: auto; font-size: 10px; }
+  #opp-bar .opp-conf { font-size: 10px; color: var(--text-faint); font-style: italic; }
+
+  #close-btn, #workshop-btn {
+    background: none; border: none;
+    color: var(--text-faint); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px;
+    transition: color var(--t-fast), transform var(--t-fast);
+  }
+  #close-btn:hover    { color: var(--danger); }
+  #workshop-btn svg   { width: 15px; height: 15px; }
+  #workshop-btn:hover { color: var(--primary); transform: scale(1.1); }
 
   /* ── Messages ── */
   #messages {
@@ -195,31 +199,46 @@
   }
 
   .msg.user .msg-bubble {
-    background: rgba(99, 179, 237, 0.12);
-    border: 1px solid rgba(99, 179, 237, 0.18);
-    color: #bee3f8;
+    background: var(--primary-dim);
+    border: 1px solid rgba(212,160,48,0.2);
+    color: var(--text);
     border-bottom-right-radius: 3px;
     align-self: flex-end;
     max-width: 92%;
   }
 
-  .msg.user .msg-label { text-align: right; color: #90cdf4; }
+  .msg.user .msg-label { text-align: right; color: var(--primary); }
 
   .msg.ori .msg-bubble {
     background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    color: #e2e8f0;
+    border: 1px solid var(--border);
+    color: var(--text);
     border-bottom-left-radius: 3px;
     max-width: 96%;
   }
 
-  .msg.ori .msg-label { color: #81e6d9; }
+  .msg.ori .msg-label { color: var(--primary); }
 
   .msg.error .msg-bubble {
-    background: rgba(245, 101, 101, 0.1);
-    border: 1px solid rgba(245, 101, 101, 0.2);
-    color: #fc8181;
+    background: rgba(245,101,101,0.1);
+    border: 1px solid rgba(245,101,101,0.2);
+    color: var(--danger);
   }
+
+  .msg.recap .msg-label { color: var(--warning); }
+  .msg.recap .msg-bubble {
+    background: rgba(246,173,85,0.07);
+    border: 1px solid rgba(246,173,85,0.2);
+    color: var(--text);
+    border-bottom-left-radius: 3px;
+    max-width: 96%;
+  }
+  .recap-header {
+    font-size: 11px; font-weight: 700; margin-bottom: 5px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .recap-result { font-size: 13px; }
+  .recap-meta   { color: var(--text-muted); font-weight: 400; }
 
   /* Cursor blink during stream */
   .cursor::after {
@@ -228,6 +247,13 @@
     opacity: 0.7;
     font-size: 11px;
   }
+
+  .ori-thinking {
+    display: block; font-size: 11px; font-style: italic;
+    color: var(--text-faint); opacity: 0.55; letter-spacing: 0.01em;
+    transition: opacity var(--t-slow);
+  }
+  .ori-thinking.fade { opacity: 0; }
 
   @keyframes blink {
     0%, 100% { opacity: 0.7; }
@@ -242,13 +268,24 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #4a5568;
+    color: var(--text-muted);
     font-size: 12px;
     text-align: center;
     padding: 20px;
   }
 
-  #empty svg { opacity: 0.3; }
+  #empty svg { opacity: 0.2; }
+
+  .prompt-chips { display: flex; flex-direction: column; gap: 5px; width: 100%; margin-top: 4px; }
+  .prompt-chip {
+    padding: 6px 10px; border-radius: 8px; font-size: 11.5px; text-align: left;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    color: var(--text-muted); cursor: pointer;
+    transition: background var(--t-base), color var(--t-base), border-color var(--t-base), transform var(--t-fast);
+    line-height: 1.3;
+  }
+  .prompt-chip:hover  { background: var(--primary-dim); border-color: rgba(212,160,48,0.3); color: var(--primary); transform: translateY(-1px); }
+  .prompt-chip:active { transform: scale(0.98); }
 
   /* ── Input area ── */
   #input-row {
@@ -262,40 +299,27 @@
 
   #input {
     flex: 1;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
-    padding: 7px 10px;
-    color: #f0f0f0;
-    font-size: 12.5px;
-    font-family: inherit;
-    resize: none;
-    outline: none;
-    line-height: 1.4;
-    max-height: 80px;
-    transition: border-color 0.15s ease;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px;
+    color: var(--text); font-size: 12.5px; font-family: inherit;
+    resize: none; outline: none; line-height: 1.4; max-height: 80px;
+    transition: border-color var(--t-fast), background var(--t-fast);
   }
 
-  #input::placeholder { color: #4a5568; }
-  #input:focus { border-color: rgba(99, 179, 237, 0.4); }
+  #input::placeholder { color: var(--text-faint); }
+  #input:focus { border-color: var(--border-focus); background: rgba(255,255,255,0.07); }
 
   #send-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #2b6cb0, #2c5282);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: opacity 0.15s ease, transform 0.1s ease;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--primary); color: #120e08;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background var(--t-fast), transform var(--t-fast);
   }
-
-  #send-btn:hover  { opacity: 0.85; }
-  #send-btn:active { transform: scale(0.94); }
-  #send-btn:disabled { opacity: 0.35; cursor: default; }
+  #send-btn:hover    { background: var(--primary-hi); transform: scale(1.05); }
+  #send-btn:active   { background: var(--primary-lo); transform: scale(0.95); }
+  #send-btn:disabled { opacity: 0.25; cursor: default; transform: none; background: var(--primary); }
 
   #send-btn svg { width: 14px; height: 14px; }
 </style>
@@ -306,12 +330,7 @@
 <div id="status-dot"></div>
 
 <!-- Bubble toggle -->
-<div id="bubble" title="Ask ORI">
-  <svg viewBox="0 0 24 24" fill="none" stroke="rgba(99,179,237,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M12 8v4M12 16h.01"/>
-  </svg>
-</div>
+<div id="bubble" title="Ask ORI"></div>
 
 <!-- Chat panel -->
 <div id="panel">
@@ -320,7 +339,16 @@
       <h1>ORI</h1>
       <div id="game-pill">no game</div>
     </div>
+    <button id="workshop-btn" title="Open Workshop"><i data-lucide="layout-dashboard"></i></button>
     <button id="close-btn" title="Close">✕</button>
+  </div>
+
+  <div id="opp-bar">
+    <span class="opp-vs">vs</span>
+    <span class="opp-name"></span>
+    <span class="opp-tier"></span>
+    <span class="opp-wr"></span>
+    <span class="opp-conf"></span>
   </div>
 
   <div id="messages">
@@ -328,7 +356,8 @@
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
-      <span>Ask ORI anything about<br>your current game</span>
+      <span id="empty-label">Ask ORI anything about<br>your current game</span>
+      <div class="prompt-chips" id="prompt-chips"></div>
     </div>
   </div>
 
@@ -343,6 +372,7 @@
   </div>
 </div>
 
+<script src="node_modules/lucide/dist/umd/lucide.min.js"></script>
 <script>
   const bubble    = document.getElementById("bubble");
   const panel     = document.getElementById("panel");
@@ -354,9 +384,53 @@
   const gamePill  = document.getElementById("game-pill");
   const statusDot = document.getElementById("status-dot");
 
-  let isOpen      = false;
-  let isStreaming = false;
+  let isOpen       = false;
+  let isStreaming  = false;
   let streamTarget = null;
+  let chatHistory  = [];
+  let currentResponseText = "";
+  let thinkingTimer = null;
+  let awaitingFirstToken = false;
+  let thinkingIdx = 0;
+
+  const ORI_THINKING = [
+    "Reading the board…",
+    "Calculating lethal…",
+    "Checking the odds…",
+    "The tavern knows…",
+    "Running the numbers…",
+    "Watching the meta…",
+    "Considering your outs…",
+    "The cards whisper…",
+    "What would the innkeeper do…",
+    "Weighing the trade…",
+  ];
+
+  function startThinking(bub) {
+    awaitingFirstToken = true;
+    thinkingIdx = Math.floor(Math.random() * ORI_THINKING.length);
+    const span = document.createElement("span");
+    span.className = "ori-thinking";
+    span.textContent = ORI_THINKING[thinkingIdx];
+    bub.appendChild(span);
+    thinkingTimer = setInterval(() => {
+      const el = bub.querySelector(".ori-thinking");
+      if (!el) return;
+      el.classList.add("fade");
+      setTimeout(() => {
+        thinkingIdx = (thinkingIdx + 1) % ORI_THINKING.length;
+        el.textContent = ORI_THINKING[thinkingIdx];
+        el.classList.remove("fade");
+      }, 350);
+    }, 2400);
+  }
+
+  function stopThinking(bub) {
+    if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
+    const el = bub ? bub.querySelector(".ori-thinking") : null;
+    if (el) el.remove();
+    awaitingFirstToken = false;
+  }
 
   // ── Interactivity toggle ─────────────────────────────────────────────────
 
@@ -389,6 +463,7 @@
 
   bubble.addEventListener("click", () => isOpen ? closePanel() : openPanel());
   closBtn.addEventListener("click", closePanel);
+  document.getElementById("workshop-btn").addEventListener("click", () => ori.openWorkshop());
 
   // ── Messages ─────────────────────────────────────────────────────────────
 
@@ -426,8 +501,8 @@
     label.textContent = "ORI";
 
     const bub = document.createElement("div");
-    bub.className = "msg-bubble cursor";
-    bub.textContent = "";
+    bub.className = "msg-bubble";
+    startThinking(bub);
 
     msg.appendChild(label);
     msg.appendChild(bub);
@@ -447,10 +522,12 @@
     inputEl.style.height = "auto";
 
     isStreaming  = true;
+    currentResponseText = "";
     sendBtn.disabled = true;
     streamTarget = startOriMessage();
 
-    ori.send(text);
+    chatHistory.push({ role: "user", content: text });
+    ori.send(text, chatHistory.slice(0, -1));
   }
 
   sendBtn.addEventListener("click", send);
@@ -472,20 +549,27 @@
 
   ori.onToken((token) => {
     if (!streamTarget) return;
+    if (awaitingFirstToken) { stopThinking(streamTarget); streamTarget.classList.add("cursor"); }
+    currentResponseText += token;
     streamTarget.textContent += token;
     messages.scrollTop = messages.scrollHeight;
   });
 
   ori.onDone(() => {
     if (streamTarget) streamTarget.classList.remove("cursor");
-    streamTarget  = null;
-    isStreaming   = false;
+    streamTarget = null;
+    isStreaming  = false;
     sendBtn.disabled = false;
     inputEl.focus();
+    if (currentResponseText) {
+      chatHistory.push({ role: "assistant", content: currentResponseText });
+      currentResponseText = "";
+    }
   });
 
   ori.onError((err) => {
     if (streamTarget) {
+      stopThinking(streamTarget);
       streamTarget.classList.remove("cursor");
       streamTarget.textContent = err;
       streamTarget.closest(".msg").className = "msg error";
@@ -499,8 +583,43 @@
 
   // ── Game state ───────────────────────────────────────────────────────────
 
+  const PROMPTS_INGAME = [
+    "Should I trade here or go face?",
+    "What's my win condition this game?",
+    "What's my opponent likely running?",
+  ];
+  const PROMPTS_IDLE = [
+    "What's strong on ladder right now?",
+    "What should I be playing this meta?",
+    "Any decks worth crafting right now?",
+  ];
+
+  function renderPromptChips(inGame) {
+    const container = document.getElementById("prompt-chips");
+    if (!container) return;
+    const prompts = inGame ? PROMPTS_INGAME : PROMPTS_IDLE;
+    container.innerHTML = "";
+    prompts.forEach(p => {
+      const chip = document.createElement("button");
+      chip.className = "prompt-chip";
+      chip.textContent = p;
+      chip.addEventListener("click", () => {
+        inputEl.value = p;
+        send();
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  renderPromptChips(false);
+
+  let wasInGame = false;
   ori.onGameState((state) => {
     const inGame = !state.includes("No active");
+    // New game started — clear conversation history
+    if (inGame && !wasInGame) chatHistory = [];
+    if (inGame !== wasInGame) renderPromptChips(inGame);
+    wasInGame = inGame;
     statusDot.className = inGame ? "active" : "";
     if (inGame) {
       const turnMatch = state.match(/Turn (\d+)/);
@@ -516,9 +635,86 @@
     }
   });
 
+  // ── Game recap ───────────────────────────────────────────────────────────
+
+  let recapBubble = null;
+
+  ori.onRecapStart(({ result, turn, oppStr }) => {
+    if (!isOpen) openPanel();
+    const resultIcon = result === "WON" ? "🏆" : result === "TIED" ? "🤝" : "💀";
+    const msg = document.createElement("div");
+    msg.className = "msg recap";
+
+    const label = document.createElement("div");
+    label.className = "msg-label";
+    label.textContent = "ORI — Game Recap";
+
+    const bub = document.createElement("div");
+    bub.className = "msg-bubble cursor";
+    bub.innerHTML = `<div class="recap-header"><span class="recap-result">${resultIcon}</span><span class="recap-meta">Turn ${turn} · vs ${oppStr}</span></div>`;
+    recapBubble = document.createElement("span");
+    bub.appendChild(recapBubble);
+
+    msg.appendChild(label);
+    msg.appendChild(bub);
+    messages.appendChild(msg);
+    hideEmpty();
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  ori.onRecapToken(token => {
+    if (!recapBubble) return;
+    recapBubble.textContent += token;
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  ori.onRecapDone(() => {
+    if (recapBubble) recapBubble.closest(".msg-bubble").classList.remove("cursor");
+    recapBubble = null;
+  });
+
+  ori.onRecapError(err => {
+    if (recapBubble) {
+      recapBubble.textContent = `Recap failed: ${err}`;
+      recapBubble.closest(".msg-bubble").classList.remove("cursor");
+      recapBubble = null;
+    }
+  });
+
+  // ── Opponent archetype ───────────────────────────────────────────────────
+
+  ori.onOppArchetype((data) => {
+    const bar = document.getElementById("opp-bar");
+    if (!data) { bar.classList.remove("visible"); return; }
+
+    bar.querySelector(".opp-name").textContent = data.name;
+
+    const tierEl = bar.querySelector(".opp-tier");
+    tierEl.textContent  = data.tier ? data.tier : "";
+    tierEl.className    = `opp-tier${data.tier ? " tier-" + data.tier : ""}`;
+
+    bar.querySelector(".opp-wr").textContent   = data.winRate != null ? `${data.winRate}% WR` : "";
+    bar.querySelector(".opp-conf").textContent = data.confidence < 50 ? `~${data.confidence}%` : "";
+
+    bar.classList.add("visible");
+  });
+
+  ori.onMulliganStart(({ hand, prompt }) => {
+    if (isStreaming) return;
+    openPanel();
+    addMessage("user", `Mulligan — dealt: ${hand.join(", ")}`);
+    chatHistory.push({ role: "user", content: prompt });
+    isStreaming          = true;
+    currentResponseText  = "";
+    sendBtn.disabled     = true;
+    streamTarget         = startOriMessage();
+  });
+
   // Poll game state every 3s when panel is open
   setInterval(() => { if (isOpen) ori.getGameState(); }, 3000);
   ori.getGameState();
+
+  lucide.createIcons();
 </script>
 </body>
 </html>

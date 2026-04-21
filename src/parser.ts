@@ -107,8 +107,26 @@ export function parseHearthstoneLog(raw: string): HearthstoneGame {
   let result: GameResult | undefined;
   let blockStack: Array<{ type: string; actor: string; target?: string }> = [];
 
+  // Track entity metadata
+  const entityCardTypes = new Map<number, number>(); // id -> CARDTYPE
+  const entityNames = new Map<number, string>(); // id -> Name
+  let lastEntityId: number | null = null;
+
   for (const line of lines) {
-    // Turn boundary
+    // 1. Track Entity IDs from FULL_ENTITY / SHOW_ENTITY
+    const feMatch = line.match(/FULL_ENTITY - Creating ID=(\d+)/);
+    const seMatch = line.match(/SHOW_ENTITY - Updating Entity=\[id=(\d+)/);
+    if (feMatch || seMatch) {
+      lastEntityId = parseInt(feMatch ? feMatch[1] : seMatch![1]);
+    }
+
+    // 2. Track CARDTYPE from indented tags
+    const cardTypeMatch = line.match(/tag=CARDTYPE value=(\d+)/);
+    if (cardTypeMatch && lastEntityId !== null && line.match(/\s+tag=CARDTYPE/)) {
+      entityCardTypes.set(lastEntityId, parseInt(cardTypeMatch[1]));
+    }
+
+    // 3. Turn boundary
     const turnMatch = line.match(/tag=TURN value=(\d+)/) || line.match(/TurnNumber=(\d+)/);
     if (turnMatch && line.includes("TAG_CHANGE")) {
       const turnNum = parseInt(turnMatch[1]);
@@ -129,15 +147,16 @@ export function parseHearthstoneLog(raw: string): HearthstoneGame {
       }
     }
 
-    if (!currentTurn) continue;
-    currentTurn.raw_lines.push(line);
+    if (currentTurn) {
+      currentTurn.raw_lines.push(line);
+    }
 
-    // Block start
+    // 4. Block start
     if (line.includes("BLOCK_START")) {
       const blockType = extractBlockType(line);
       const actor = extractName(line) ?? "unknown";
       const target = extractTarget(line) ?? undefined;
-      if (blockType) {
+      if (blockType && currentTurn) {
         blockStack.push({ type: blockType, actor, target });
         let actionType: CardAction["type"] | null = null;
         switch (blockType) {
@@ -156,27 +175,41 @@ export function parseHearthstoneLog(raw: string): HearthstoneGame {
 
     if (line.includes("BLOCK_END") && blockStack.length > 0) blockStack.pop();
 
-    // Zone changes
-    const zoneMatch = line.match(/TAG_CHANGE.*tag=ZONE value=(\w+).*Entity=\[name=([^\]]+)/);
+    // 5. Zone changes with CARDTYPE filtering
+    const zoneMatch = line.match(/TAG_CHANGE.*Entity=\[id=(\d+)(?:\s+name=([^\]]*))?\].*tag=ZONE value=(\w+)/);
     if (zoneMatch) {
-      const [, zone, name] = zoneMatch;
+      const [, idStr, nameMatch, zone] = zoneMatch;
+      const id = parseInt(idStr);
+      const name = (nameMatch || entityNames.get(id) || `Entity #${id}`).trim();
+      if (nameMatch) entityNames.set(id, nameMatch.trim());
+
+      const cardType = entityCardTypes.get(id);
+      const isMinionOrWeapon = cardType === 4 || cardType === 7;
+      // console.log(`DEBUG: Entity ${id} (${name}) type ${cardType} moving to ${zone}`);
+
       if (zone === "PLAY") {
-        const alreadyCaptured = currentTurn.actions.some(
-          (a) => a.card === name && (a.type === "PLAY" || a.type === "SUMMON")
-        );
-        if (!alreadyCaptured) {
-          currentTurn.actions.push({ type: "SUMMON", player: currentTurn.player, card: name, zone_to: "PLAY" });
-        }
-        if (!currentBoard.friendly_minions!.includes(name)) {
-          currentBoard.friendly_minions!.push(name);
+        if (isMinionOrWeapon) {
+          if (currentTurn) {
+            const alreadyCaptured = currentTurn.actions.some(
+              (a) => a.card === name && (a.type === "PLAY" || a.type === "SUMMON")
+            );
+            if (!alreadyCaptured) {
+              currentTurn.actions.push({ type: "SUMMON", player: currentTurn.player, card: name, zone_to: "PLAY" });
+            }
+          }
+          if (!currentBoard.friendly_minions!.includes(name)) {
+            currentBoard.friendly_minions!.push(name);
+          }
         }
       }
       if (zone === "GRAVEYARD") {
         currentBoard.friendly_minions = currentBoard.friendly_minions!.filter((m) => m !== name);
         currentBoard.opposing_minions = currentBoard.opposing_minions!.filter((m) => m !== name);
-        currentTurn.actions.push({ type: "DEATH", player: currentTurn.player, card: name, zone_to: "GRAVEYARD" });
+        if (isMinionOrWeapon && currentTurn) {
+          currentTurn.actions.push({ type: "DEATH", player: currentTurn.player, card: name, zone_to: "GRAVEYARD" });
+        }
       }
-      if (zone === "HAND") {
+      if (zone === "HAND" && currentTurn) {
         const prev = currentTurn.actions[currentTurn.actions.length - 1];
         if (!prev || prev.card !== name || prev.type !== "DRAW") {
           currentTurn.actions.push({ type: "DRAW", player: currentTurn.player, card: name, zone_to: "HAND" });
@@ -184,19 +217,25 @@ export function parseHearthstoneLog(raw: string): HearthstoneGame {
       }
     }
 
-    // HP tracking
-    const hpMatch = line.match(/TAG_CHANGE.*tag=HEALTH value=(\d+)/);
+    // 6. HP tracking
+    const hpMatch = line.match(/TAG_CHANGE.*Entity=\[id=(\d+)(?:\s+name=([^\]]*))?\].*tag=HEALTH value=(\d+)/);
     if (hpMatch) {
-      const hp = parseInt(hpMatch[1]);
-      if (line.includes("FRIENDLY") || !line.includes("OPPOSING")) {
+      const [, idStr, nameMatch, hpStr] = hpMatch;
+      const hp = parseInt(hpStr);
+      const name = (nameMatch || entityNames.get(parseInt(idStr)) || "").trim();
+
+      // In a real log, we'd ideally identify the hero entities (usually IDs 4 and 64 or similar)
+      // For now, we'll keep the simple "FRIENDLY" vs "OPPOSING" name/context check if possible,
+      // but also fallback to checking if it's a known hero name if we had that.
+      if (line.includes("FRIENDLY") || name === "Friendly Hero") {
         currentBoard.friendly_hp = hp;
-      } else {
+      } else if (line.includes("OPPOSING") || name === "Opposing Hero") {
         currentBoard.opposing_hp = hp;
       }
     }
 
-    // Game over
-    const goMatch = line.match(/TAG_CHANGE.*PLAYSTATE=(WON|LOST|CONCEDED|TIED)/);
+    // 7. Game over
+    const goMatch = line.match(/TAG_CHANGE.*Entity=.*tag=PLAYSTATE value=(WON|LOST|CONCEDED|TIED)/);
     if (goMatch) {
       const ps = goMatch[1];
       result = {
@@ -204,6 +243,7 @@ export function parseHearthstoneLog(raw: string): HearthstoneGame {
         reason: ps === "CONCEDED" ? "CONCEDE" : "NORMAL",
       };
     }
+
   }
 
   if (currentTurn) {
